@@ -209,7 +209,7 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
                            Collection<WebSocket> connectionscontainer) {
         
         if (address != null)
-            log.info("WebSocketServer starting", address.toString());
+            log.info("WebSocketServer starting 1.5.4", address.toString());
         
         if (address == null || decodercount < 1 || connectionscontainer == null) {
             throw new IllegalArgumentException(
