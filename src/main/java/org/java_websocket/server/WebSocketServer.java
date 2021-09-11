@@ -370,6 +370,7 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
         try {
             int shutdownCount = 5;
             int selectTimeout = 0;
+            boolean onlyWrite = false;
             while (!selectorthread.isInterrupted() && shutdownCount != 0) {
                 SelectionKey key = null;
                 try {
@@ -383,21 +384,24 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
                     
                     Set<SelectionKey> keys = selector.selectedKeys();
                     Iterator<SelectionKey> i = keys.iterator();
-                    
+                    if (onlyWrite)
+                        onlyWrite = true;
                     while (i.hasNext()) {
                         key = i.next();
                         
                         if (!key.isValid()) {
+                            onlyWrite = false;
                             continue;
                         }
                         
                         if (key.isAcceptable()) {
-                            log.info("key accepted");
+                            onlyWrite = false;
                             doAccept(key, i);
                             continue;
                         }
                         
                         if (key.isReadable() && !doRead(key, i)) {
+                            onlyWrite = false;
                             continue;
                         }
                         
@@ -410,18 +414,22 @@ public abstract class WebSocketServer extends AbstractWebSocket implements Runna
                     log.error("WebSocketServer Canceled key exception", e);
                     // an other thread may cancel the key
                 } catch (ClosedByInterruptException e) {
-                    log.error("WebSocketServer ClosedByInterruptException exception", e);
                     return; // do the same stuff as when InterruptedException is thrown
                 } catch (WrappedIOException ex) {
-                    log.error("WebSocketServer wrappedIoException exception", ex);
                     handleIOException(key, ex.getConnection(), ex.getIOException());
                 } catch (IOException ex) {
-                    log.error("WebSocketServer IOException exception", ex);
                     handleIOException(key, null, ex);
                 } catch (InterruptedException e) {
-                    log.error("WebSocketServer interruptedException exception", e);
                     // FIXME controlled shutdown (e.g. take care of buffermanagement)
                     Thread.currentThread().interrupt();
+                }
+                
+                if (onlyWrite) {
+                    try {
+                        Thread.sleep(50);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
                 }
             }
         } catch (RuntimeException e) {
